@@ -25,4 +25,4 @@ jobs:
 
       - name: Compile Code
         run: |
-          python app2.py
+          timeout 2m python app2.py
