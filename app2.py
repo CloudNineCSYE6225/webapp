@@ -42,7 +42,7 @@ def create_user():
         return make_response('', 400, {'Cache-Control': 'no-cache'})
 
     if User.query.filter_by(username=username).first():
-        return make_response(jsonify({"error": "User already exists"}), 400)
+        return make_response(jsonify({"error": "User already exists"}), 400, {'Cache-Control': 'no-cache'})
     
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     user = User(
