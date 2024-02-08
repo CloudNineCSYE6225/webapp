@@ -4,12 +4,13 @@ from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_httpauth import HTTPBasicAuth
 import uuid
+from sqlalchemy import text
 from datetime import datetime
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
-# Database configurations
+# database configurations
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Bhary123$$@localhost/Users'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -37,6 +38,9 @@ def verify_password(username, password):
 def create_user():
     data = request.json
     username = data['username']
+    if request.args:
+        return make_response('', 400, {'Cache-Control': 'no-cache'})
+
     if User.query.filter_by(username=username).first():
         return make_response(jsonify({"error": "User already exists"}), 400)
     
@@ -67,9 +71,11 @@ def update_user():
     data = request.json
     username = auth.current_user()
     user = User.query.filter_by(username=username).first()
-    
+    if request.args:
+        return make_response('', 400, {'Cache-Control': 'no-cache'})
+
     if not user:
-        return make_response(jsonify({"error": "User not found"}), 404)
+        return make_response(jsonify({"error": "User not found"}), 404, {'Cache-Control': 'no-cache'})
     
     if 'first_name' in data:
         user.first_name = data['first_name']
@@ -78,7 +84,7 @@ def update_user():
     if 'password' in data:
         user.password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     else:
-        return make_response(jsonify({"error": "Bad Request. Missing required fields."}), 400)
+        return make_response(jsonify({"error": "Bad Request. Missing required fields."}), 400, {'Cache-Control': 'no-cache'})
 
     user.account_updated = datetime.utcnow()
     db.session.commit()
@@ -91,7 +97,10 @@ def update_user():
 def get_user():
     username = auth.current_user()
     user = User.query.filter_by(username=username).first()
-    
+    # check for query params
+    if request.args:
+        return make_response('', 503, {'Cache-Control': 'no-cache'})
+
     if user:
         user_data = {
             "id": user.id,
@@ -103,20 +112,22 @@ def get_user():
         }
         return jsonify(user_data), 200
     else:
-        return make_response(jsonify({"error": "User not found"}), 404)
+        return make_response(jsonify({"error": "User not found"}), 404, {'Cache-Control': 'no-cache'})
 
-# Public: Operations available to all users without authentication 
+# Public end points: Operations available to all users without authentication 
 @app.route('/healthz', methods=['GET'])
 def health_end_point():
-    # check if payload (payload not allowed)
+    # check for query params
     if request.args:
-        return make_response('', 405)
-
+        return make_response('', 503, {'Cache-Control': 'no-cache'})
+    # check if payload (payload not allowed)
     if request.get_data():
-        return make_response('', 400, {'Cache-Control': 'no-cache'})
+        return make_response('', 503, {'Cache-Control': 'no-cache'})
 
     try:
-        # db.session.connection().ping()
+        # check connection with database
+        db.session.execute(text('SELECT * from user'))
+        db.session.commit()
         return make_response('', 200, {'Cache-Control': 'no-cache'})
 
     except Exception as e:
@@ -124,23 +135,23 @@ def health_end_point():
    
 @app.route('/healthz', methods=['POST'])   
 def health_post_end_point():
-    return make_response('', 405)
+    return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['PUT'])   
 def health_put_end_point():
-    return make_response('', 405)
+    return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['DELETE'])   
 def health_delete_end_point():
-    return make_response('', 405)
+    return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['HEAD'])   
 def health_head_end_point():
-    return make_response('', 405)
+    return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['OPTIONS'])   
 def health_options_end_point():
-    return make_response('', 405)
+    return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 if __name__ == '__main__':
     app.run(port= 8080, debug=True)
