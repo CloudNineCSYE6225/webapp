@@ -92,7 +92,8 @@ def update_user():
     return '', 204
 
 
-@app.route('/v1/user/self', methods=['GET']);
+
+@app.route('/v1/user/self', methods=['GET']
 @auth.login_required
 def get_user():
     username = auth.current_user()

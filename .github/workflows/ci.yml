@@ -25,4 +25,7 @@ jobs:
 
       - name: Compile Code
         run: |
-          python app2.py
+          python app2.py &
+          PID=$! 
+          sleep 120
+          kill $PID
