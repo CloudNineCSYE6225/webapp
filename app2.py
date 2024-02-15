@@ -6,12 +6,13 @@ from flask_httpauth import HTTPBasicAuth
 import uuid
 from sqlalchemy import text
 from datetime import datetime
+from flask import current_app
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
 # database configurations
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Bhary123$$@localhost/Users'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost/Users'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -30,6 +31,8 @@ class User(db.Model):
 
 @auth.verify_password
 def verify_password(username, password):
+    current_app.logger.debug(f"Authenticating user: {username}")
+    current_app.logger.debug(f"Authenticating password: {password}")
     user = User.query.filter_by(username=username).first()
     if user and bcrypt.check_password_hash(user.password, password):
         return username
@@ -38,6 +41,7 @@ def verify_password(username, password):
 def create_user():
     data = request.json
     username = data['username']
+    print()
     if request.args:
         return make_response('', 400, {'Cache-Control': 'no-cache'})
 
@@ -93,7 +97,7 @@ def update_user():
 
 
 
-@app.route('/v1/user/self', methods=['GET']
+@app.route('/v1/user/self', methods=['GET'])
 @auth.login_required
 def get_user():
     username = auth.current_user()
@@ -155,4 +159,4 @@ def health_options_end_point():
     return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 if __name__ == '__main__':
-    app.run(port= 8080, debug=True)
+    app.run(host='0.0.0.0',port= 8080, debug=True)
