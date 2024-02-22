@@ -26,6 +26,10 @@ jobs:
         with:
           packer-version: 'latest'
 
+      - name: Run `packer init`
+        id: init
+        run: "packer init newtemplate.pkr.hcl"
+
       - name: Run packer fmt
         run: |
           packer fmt -check -diff .
