@@ -29,6 +29,8 @@ jobs:
       - name: Run `packer init`
         id: init
         run: "packer init newtemplate.pkr.hcl"
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
 
       - name: Run packer fmt
         run: |
@@ -41,3 +43,5 @@ jobs:
       - name: Run packer validate
         run: |
           packer validate .
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
