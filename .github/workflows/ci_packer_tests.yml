@@ -29,8 +29,6 @@ jobs:
       - name: Run `packer init`
         id: init
         run: packer init newtemplate.pkr.hcl
-       # env:
-       #   GOOGLE_APPLICATION_CREDENTIALS: ./serviceaccount.json
 
       - name: Run packer fmt
         run: |
@@ -42,5 +40,4 @@ jobs:
 
       - name: Run packer validate
         run: packer validate .
-      #  env:
-       #   GOOGLE_APPLICATION_CREDENTIALS: ./serviceaccount.json
+        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
