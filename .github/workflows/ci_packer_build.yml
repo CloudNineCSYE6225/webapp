@@ -12,6 +12,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
+    - name: Write service account key to file
+      run: |
+        echo '${{ secrets.GCP_CREDENTIALS }}' > serviceaccount.json
+        
     - name: Set up Packer
       uses: hashicorp/setup-packer@main
       with:
