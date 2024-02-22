@@ -21,6 +21,10 @@ jobs:
           service_account_key: ${{ secrets.GCP_CREDENTIALS }}
           export_default_credentials: true
 
+      - name: Write service account key to file
+      run: |
+        echo '${{ secrets.GCP_CREDENTIALS }}' > serviceaccount.json
+
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
@@ -30,7 +34,7 @@ jobs:
         id: init
         run: "packer init newtemplate.pkr.hcl"
         env:
-          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+          GCP_CREDENTIALS: serviceaccount.json
 
       - name: Run packer fmt
         run: |
@@ -44,4 +48,4 @@ jobs:
         run: |
           packer validate .
         env:
-          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+          GCP_CREDENTIALS: serviceaccount.json
