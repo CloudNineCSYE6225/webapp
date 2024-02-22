@@ -40,4 +40,5 @@ jobs:
 
       - name: Run packer validate
         run: packer validate .
-        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
