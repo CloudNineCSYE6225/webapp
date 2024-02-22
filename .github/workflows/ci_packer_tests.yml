@@ -21,6 +21,12 @@ jobs:
           service_account_key: ${{ secrets.GCP_CREDENTIALS }}
           export_default_credentials: true
 
+      - name: Debug GCP Credentials Secret
+        run: echo "${{ secrets.GCP_CREDENTIALS }}"
+
+      - name: Print Service Account Key
+        run: cat serviceaccount.json
+
       - name: Write service account key to file
         run: echo '${{ secrets.GCP_CREDENTIALS }}' > serviceaccount.json
 
