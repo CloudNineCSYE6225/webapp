@@ -1,0 +1,27 @@
+name: Packer Build on Merge
+ 
+on:
+  push:
+    branches:
+      - main 
+ 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Packer
+      uses: hashicorp/setup-packer@main
+      with:
+        packer-version: '1.7.0' 
+    - name: Run `packer init`
+      id: init
+      run: "packer init newtemplate.pkr.hcl"  
+      env:
+        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}  
+    - name: Build with Packer
+      run: packer build -var 'credentials_file=serviceaccount.json' newtemplate.pkr.hcl
+      env:
+        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
