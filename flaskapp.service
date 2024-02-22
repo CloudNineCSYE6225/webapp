@@ -1,0 +1,12 @@
+[Unit]
+Description=Flask Application Service
+After=network.target
+
+[Service]
+User=packer
+WorkingDirectory=/home/packer/webapp
+ExecStart=/bin/bash -c 'source /home/packer/webapp/venv/bin/activate && pip install flask && python3.8 /home/packer/webapp/app2.py'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
