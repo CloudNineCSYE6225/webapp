@@ -12,7 +12,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Set up Packer
-      uses: hashicorp/setup-packer@v1
+      uses: hashicorp/setup-packer@main
       with:
         packer-version: '1.7.0' 
     - name: Build with Packer
