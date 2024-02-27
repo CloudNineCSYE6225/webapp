@@ -100,3 +100,6 @@ encode_credentials: Encodes the username and password for Basic Authentication.
 Usage
 Run the tests to ensure the Flask API functions correctly.
 Modify and expand the test cases as necessary to cover more scenarios and endpoints.
+
+
+Git Workflow check
