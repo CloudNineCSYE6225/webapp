@@ -35,7 +35,7 @@ variable "zone" {
 variable "credentials_file" {
   type    = string
   default = "serviceaccount.json"
-}
+
 
 locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
 
