@@ -100,3 +100,7 @@ encode_credentials: Encodes the username and password for Basic Authentication.
 Usage
 Run the tests to ensure the Flask API functions correctly.
 Modify and expand the test cases as necessary to cover more scenarios and endpoints.
+
+Configuring the environment file for db connection using resource:
+https://dev.to/sasicodes/flask-and-env-22am
+https://stackoverflow.com/questions/54566480/how-to-read-a-file-in-python-flask

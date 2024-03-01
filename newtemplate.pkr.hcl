@@ -24,7 +24,7 @@ variable "source_image" {
 
 variable "ssh_username" {
   type    = string
-  default = "packer"
+  default = "centOS"
 }
 
 variable "zone" {
