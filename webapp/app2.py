@@ -13,10 +13,15 @@ app = Flask(__name__)
 auth = HTTPBasicAuth()
 
 def load_database_uri(ini_file_path='/opt/csye6225/db_properties.ini'):
-    with open(ini_file_path, 'r') as file:
-        line = file.readline().strip()
-        if line.startswith('SQLALCHEMY_DATABASE_URI'):
-            return line.split('=')[1]  # Extract the URI part
+    try:
+        with open(ini_file_path, 'r') as file:
+            for line in file:
+                line = line.strip()
+                if line.startswith('SQLALCHEMY_DATABASE_URI'):
+                    return line.split('=')[1]  # Extract the URI part
+    except FileNotFoundError:
+        # Handle the error or log it if the file does not exist
+        print(f"File {ini_file_path} not found.")
     return None
 
 # Load database configurations from the INI file
