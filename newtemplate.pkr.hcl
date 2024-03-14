@@ -24,7 +24,7 @@ variable "source_image" {
 
 variable "ssh_username" {
   type    = string
-  default = "packer"
+  default = "centOS"
 }
 
 variable "zone" {
@@ -57,12 +57,12 @@ build {
 
   provisioner "file" {
     source      = "webapp"
-    destination = "~/webapp"
+    destination = "/tmp/webapp"
   }
 
   provisioner "file" {
     source      = "flaskapp.service"
-    destination = "~/flaskapp.service"
+    destination = "/tmp/flaskapp.service"
   }
 
   provisioner "shell" {
