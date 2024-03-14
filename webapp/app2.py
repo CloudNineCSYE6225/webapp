@@ -4,6 +4,7 @@ from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_httpauth import HTTPBasicAuth
 import uuid
+import os
 from sqlalchemy import text
 from datetime import datetime
 from flask import current_app
@@ -11,8 +12,24 @@ from flask import current_app
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
-# database configurations
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost/Users'
+def load_database_uri(ini_file_path='/opt/csye6225/db_properties.ini'):
+    with open(ini_file_path, 'r') as file:
+        line = file.readline().strip()
+        if line.startswith('SQLALCHEMY_DATABASE_URI'):
+            return line.split('=')[1]  # Extract the URI part
+    return None
+
+# Load database configurations from the INI file
+database_uri = load_database_uri()
+if database_uri:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+else:
+    # Fallback to a default value or handle the error appropriately
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost/Users'
+
+
+# Load database configurations from environment variables
+#app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI', 'mysql+pymysql://root:root@localhost/Users')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
