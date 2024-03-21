@@ -22,7 +22,7 @@ log_file = 'app.log'
 log_path = os.path.join(log_directory, log_file)
 
 # Ensure the directory exists
-os.makedirs(log_directory, exist_ok=True)
+#os.makedirs(log_directory, exist_ok=True)
 
 try:
     # Configure logging to file in JSON format
