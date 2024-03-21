@@ -17,23 +17,36 @@ from logging.handlers import RotatingFileHandler
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
+log_directory = '/var/log/webapp'
+log_file = 'app.log'
+log_path = os.path.join(log_directory, log_file)
 
-# Configure logging to file in JSON format
-logHandler = RotatingFileHandler('/var/log/webapp/app.log', maxBytes=10000, backupCount=3)
-# Custom formatter class to include milliseconds and timezone
-class CustomJsonFormatter(jsonlogger.JsonFormatter):
-    def add_fields(self, log_record, record, message_dict):
-        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
-        # Format the timestamp yourself
-        now = datetime.utcnow().replace(tzinfo=timezone.utc)
-        log_record['timestamp'] = now.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+# Ensure the directory exists
+os.makedirs(log_directory, exist_ok=True)
+
+try:
+    # Configure logging to file in JSON format
+    logHandler = RotatingFileHandler('/var/log/webapp/app.log', maxBytes=10000, backupCount=3)
 
 
-formatter = CustomJsonFormatter('%(levelname)s %(name)s %(message)s %(asctime)s')
+    # Custom formatter class to include milliseconds and timezone
+    class CustomJsonFormatter(jsonlogger.JsonFormatter):
+        def add_fields(self, log_record, record, message_dict):
+            super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+            # Format the timestamp yourself
+            now = datetime.utcnow().replace(tzinfo=timezone.utc)
+            log_record['timestamp'] = now.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
-logHandler.setFormatter(formatter)
-app.logger.addHandler(logHandler)
-app.logger.setLevel(logging.INFO)
+
+    formatter = CustomJsonFormatter('%(levelname)s %(name)s %(message)s %(asctime)s')
+
+    logHandler.setFormatter(formatter)
+    app.logger.addHandler(logHandler)
+    app.logger.setLevel(logging.INFO)
+except Exception as e:
+    print(f"Failed to configure logging: {e}")
+
+
 
 
 
