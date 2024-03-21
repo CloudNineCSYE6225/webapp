@@ -9,7 +9,7 @@ packer {
 
 variable "machine_type" {
   type    = string
-  default = "n1-standard-1"
+  default = "n1-standard-4"
 }
 
 variable "project_id" {
@@ -29,7 +29,7 @@ variable "ssh_username" {
 
 variable "zone" {
   type    = string
-  default = "us-central1-a"
+  default = "us-west4-b"
 }
 
 variable "credentials_file" {
@@ -63,6 +63,11 @@ build {
   provisioner "file" {
     source      = "flaskapp.service"
     destination = "/tmp/flaskapp.service"
+  }
+
+  provisioner "file" {
+    source      = "config.yaml"
+    destination = "/tmp/opsconfig.yaml"
   }
 
   provisioner "shell" {

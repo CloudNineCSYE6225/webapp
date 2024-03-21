@@ -17,6 +17,11 @@ sudo useradd -s /bin/false -g csye6225 -d /opt/csye6225 -m csye6225
 # Install Git, in case it's needed to clone the repository
 sudo yum install -y git
  
+curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
+sudo bash add-google-cloud-ops-agent-repo.sh --also-install
+sudo cp /tmp/opsconfig.yaml /etc/google-cloud-ops-agent/config.yaml
+sudo service google-cloud-ops-agent restart
+
 
 
 
@@ -55,10 +60,10 @@ sudo yum install -y pkg-config
 sudo yum install -y mysql-devel
 
 # Install dependencies from requirements.txt
-pip3.8 install -r requirements.txt
+#pip3.8 install -r requirements.txt
  
 # Install additional dependencies
-pip3.8 install pytest flask-testing python-dotenv cryptography flask-sqlalchemy flask-migrate flask-bcrypt flask-httpauth pymysql
+pip3.8 install pytest flask-testing python-dotenv cryptography flask-sqlalchemy flask-migrate flask-bcrypt flask-httpauth python-json-logger pymysql
  
 # Configure Application by creating a .env file
 #sudo echo "SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:root@localhost/Users" > .env
@@ -78,6 +83,9 @@ pip3.8 install pytest flask-testing python-dotenv cryptography flask-sqlalchemy 
 #sudo chown -R csye6225:csye6225 ~/webapp
 sudo chown csye6225:csye6225 /opt/csye6225
 sudo chown csye6225:csye6225 /opt/csye6225/webapp 
+sudo mkdir /var/log/webapp
+sudo touch /var/log/webapp/app.log
+sudo chown csye6225:csye6225 /var/log/webapp/app.log
 
 # Reload the systemd daemon to recognize the new service
 sudo systemctl daemon-reload
