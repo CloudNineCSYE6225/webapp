@@ -4,13 +4,39 @@ from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_httpauth import HTTPBasicAuth
 import uuid
+import time
 import os
 from sqlalchemy import text
 from datetime import datetime
 from flask import current_app
+from pythonjsonlogger import jsonlogger
+import logging
+from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
+
+
+# Configure logging to file in JSON format
+logHandler = RotatingFileHandler('/var/log/webapp/app.log', maxBytes=10000, backupCount=3)
+# Custom formatter class to include milliseconds and timezone
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def add_fields(self, log_record, record, message_dict):
+        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+        # Format the timestamp yourself
+        now = datetime.utcnow().replace(tzinfo=timezone.utc)
+        log_record['timestamp'] = now.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+
+formatter = CustomJsonFormatter('%(levelname)s %(name)s %(message)s %(asctime)s')
+
+logHandler.setFormatter(formatter)
+app.logger.addHandler(logHandler)
+app.logger.setLevel(logging.INFO)
+
+
+
 
 def load_database_uri(ini_file_path='/opt/csye6225/db_properties.ini'):
     try:
@@ -62,12 +88,15 @@ def verify_password(username, password):
 @app.route('/v1/user', methods=['POST'])
 def create_user():
     data = request.json
+    app.logger.info('Received request for user creation', extra={'request_data': data})
     username = data['username']
     print()
     if request.args:
+        app.logger.warning('Unexpected query parameters in user creation request')
         return make_response('', 400, {'Cache-Control': 'no-cache'})
 
     if User.query.filter_by(username=username).first():
+        app.logger.info('Attempt to create an existing user', extra={'username': data['username']})
         return make_response(jsonify({"error": "User already exists"}), 400, {'Cache-Control': 'no-cache'})
     
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
@@ -80,6 +109,7 @@ def create_user():
     )
     db.session.add(user)
     db.session.commit()
+    app.logger.info('User created successfully', extra={'user_id': user.id, 'username': user.username})
     
     return jsonify({
         "id": user.id,
@@ -96,8 +126,10 @@ def create_user():
 def update_user():
     data = request.json
     username = auth.current_user()
+    app.logger.info('Received get request for user', extra={'username': username})
     user = User.query.filter_by(username=username).first()
     if request.args:
+        app.logger.info('Illegal put request arguments')
         return make_response('', 400, {'Cache-Control': 'no-cache'})
 
     if not user:
@@ -110,10 +142,12 @@ def update_user():
     if 'password' in data:
         user.password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     else:
+        app.logger.info('Illegal Put request, missing required fields')
         return make_response(jsonify({"error": "Bad Request. Missing required fields."}), 400, {'Cache-Control': 'no-cache'})
 
     user.account_updated = datetime.utcnow()
     db.session.commit()
+    app.logger.info('User updated successfully', extra={'username': username})
     
     return '', 204
 
@@ -126,6 +160,7 @@ def get_user():
     user = User.query.filter_by(username=username).first()
     # check for query params
     if request.args:
+        app.logger.info('Illegal get request arguments')
         return make_response('', 503, {'Cache-Control': 'no-cache'})
 
     if user:
@@ -137,47 +172,61 @@ def get_user():
             "account_created": user.account_created.isoformat() + 'Z',
             "account_updated": user.account_updated.isoformat() + 'Z'
         }
+        app.logger.info('Received get request for user', extra={'username': username})
         return jsonify(user_data), 200
     else:
+        app.logger.info('Illegal get request for user')
         return make_response(jsonify({"error": "User not found"}), 404, {'Cache-Control': 'no-cache'})
 
 # Public end points: Operations available to all users without authentication 
 @app.route('/healthz', methods=['GET'])
 def health_end_point():
+
+    app.logger.info('API Request Received', extra={'path': request.path, 'method': request.method})
     # check for query params
     if request.args:
+
+        app.logger.info('Illegal Health check arguments')
         return make_response('', 503, {'Cache-Control': 'no-cache'})
     # check if payload (payload not allowed)
     if request.get_data():
+        app.logger.info('Illegal Health check endpoint payload')
         return make_response('', 503, {'Cache-Control': 'no-cache'})
 
     try:
         # check connection with database
         db.session.execute(text('SELECT * from user'))
         db.session.commit()
+        app.logger.info('Health check passed')
         return make_response('', 200, {'Cache-Control': 'no-cache'})
 
     except Exception as e:
+        app.logger.info('Illegal Health check endpoint/request method')
         return make_response('', 503, {'Cache-Control': 'no-cache'})
    
 @app.route('/healthz', methods=['POST'])   
 def health_post_end_point():
+    app.logger.info('Illegal Health check endpoint/request method')
     return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['PUT'])   
 def health_put_end_point():
+    app.logger.info('Illegal Health check endpoint/request method')
     return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['DELETE'])   
 def health_delete_end_point():
+    app.logger.info('Illegal Health check endpoint/request method')
     return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['HEAD'])   
 def health_head_end_point():
+    app.logger.info('Illegal Health check endpoint/request method')
     return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['OPTIONS'])   
 def health_options_end_point():
+    app.logger.info('Illegal Health check endpoint/request method')
     return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 if __name__ == '__main__':
