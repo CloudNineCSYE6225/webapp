@@ -63,7 +63,7 @@ sudo yum install -y mysql-devel
 #pip3.8 install -r requirements.txt
  
 # Install additional dependencies
-pip3.8 install pytest flask-testing python-dotenv cryptography flask-sqlalchemy flask-migrate flask-bcrypt flask-httpauth python-json-logger pymysql
+pip3.8 install pytest flask-testing python-dotenv cryptography flask-sqlalchemy flask-migrate flask-bcrypt flask-httpauth python-json-logger pymysql google-cloud-pubsub requests
  
 # Configure Application by creating a .env file
 #sudo echo "SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:root@localhost/Users" > .env
