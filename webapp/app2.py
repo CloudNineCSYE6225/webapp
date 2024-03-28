@@ -5,6 +5,7 @@ from flask_bcrypt import Bcrypt
 from flask_httpauth import HTTPBasicAuth
 import uuid
 import time
+import urllib.parse
 import os
 from sqlalchemy import text
 from datetime import datetime
@@ -13,6 +14,11 @@ from pythonjsonlogger import jsonlogger
 import logging
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
+from google.cloud import pubsub_v1
+import json
+
+publisher = pubsub_v1.PublisherClient()
+topic_name = 'projects/dev6225webapp/topics/verify_email_id'
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
@@ -47,7 +53,20 @@ except Exception as e:
     print(f"Failed to configure logging: {e}")
 
 
-
+def publish_verification_request(user_email):
+    message_json = json.dumps({
+        'email': user_email,
+    })
+    message_bytes = message_json.encode('utf-8')
+    
+    # Publish the message
+    future = publisher.publish(topic_name, data=message_bytes)
+    try:
+        # Wait for the publish call to return and get the message ID
+        message_id = future.result()
+        print(f"Message published with ID: {message_id}")
+    except Exception as e:
+        print(f"An exception occurred while publishing: {e}")
 
 
 
@@ -89,6 +108,7 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     account_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     account_updated = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    verified = db.Column(db.Boolean, default=False, nullable=False)
 
 @auth.verify_password
 def verify_password(username, password):
@@ -109,7 +129,7 @@ def create_user():
         return make_response('', 400, {'Cache-Control': 'no-cache'})
 
     if User.query.filter_by(username=username).first():
-        app.logger.info('Attempt to create an existing user', extra={'username': data['username']})
+        app.logger.error('Attempt to create an existing user', extra={'username': data['username']})
         return make_response(jsonify({"error": "User already exists"}), 400, {'Cache-Control': 'no-cache'})
     
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
@@ -123,7 +143,7 @@ def create_user():
     db.session.add(user)
     db.session.commit()
     app.logger.info('User created successfully', extra={'user_id': user.id, 'username': user.username})
-    
+    publish_verification_request(user.username)
     return jsonify({
         "id": user.id,
         "first_name": user.first_name,
@@ -142,11 +162,15 @@ def update_user():
     app.logger.info('Received get request for user', extra={'username': username})
     user = User.query.filter_by(username=username).first()
     if request.args:
-        app.logger.info('Illegal put request arguments')
+        app.logger.warning('Illegal put request arguments')
         return make_response('', 400, {'Cache-Control': 'no-cache'})
 
     if not user:
         return make_response(jsonify({"error": "User not found"}), 404, {'Cache-Control': 'no-cache'})
+    
+    if not user.verified:
+        app.logger.error('User account not verified')
+        return make_response(jsonify({"error": "User account not verified."})), 403  # HTTP 403 Forbidden
     
     if 'first_name' in data:
         user.first_name = data['first_name']
@@ -171,11 +195,16 @@ def update_user():
 def get_user():
     username = auth.current_user()
     user = User.query.filter_by(username=username).first()
+
     # check for query params
     if request.args:
-        app.logger.info('Illegal get request arguments')
+        app.logger.warning('Illegal get request arguments')
         return make_response('', 503, {'Cache-Control': 'no-cache'})
 
+    if not user.verified:
+        app.logger.error('User account not verified')
+        return make_response(jsonify({"error": "User account not verified."})), 403  
+    
     if user:
         user_data = {
             "id": user.id,
@@ -188,7 +217,7 @@ def get_user():
         app.logger.info('Received get request for user', extra={'username': username})
         return jsonify(user_data), 200
     else:
-        app.logger.info('Illegal get request for user')
+        app.logger.error('Illegal get request for user')
         return make_response(jsonify({"error": "User not found"}), 404, {'Cache-Control': 'no-cache'})
 
 # Public end points: Operations available to all users without authentication 
@@ -219,12 +248,12 @@ def health_end_point():
    
 @app.route('/healthz', methods=['POST'])   
 def health_post_end_point():
-    app.logger.info('Illegal Health check endpoint/request method')
+    app.logger.error('Illegal Health check endpoint/request method')
     return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['PUT'])   
 def health_put_end_point():
-    app.logger.info('Illegal Health check endpoint/request method')
+    app.logger.error('Illegal Health check endpoint/request method')
     return make_response('', 405, {'Cache-Control': 'no-cache'})
 
 @app.route('/healthz', methods=['DELETE'])   
@@ -241,6 +270,47 @@ def health_head_end_point():
 def health_options_end_point():
     app.logger.info('Illegal Health check endpoint/request method')
     return make_response('', 405, {'Cache-Control': 'no-cache'})
+
+
+@app.route('/verify', methods=['GET'])
+def verify_email():
+    token = request.args.get('token')
+    email = urllib.parse.unquote(request.args.get('email'))
+    expires_str = urllib.parse.unquote(request.args.get('expires'))
+    expires = datetime.fromisoformat(expires_str)
+
+    if datetime.utcnow() > expires:
+        app.logger.warning('verification link expired')
+        return make_response(jsonify({"error": "This verification link has expired."})), 400
+
+    user = User.query.filter_by(username=email).first()
+    if not user:
+        app.logger.warning('Email not found, username does not exist')
+        return make_response(jsonify({"error": "Email not found, username does not exist."})), 404
+
+    # Check if the user is already verified
+    if user.verified:
+        app.logger.info('User account is already verified')
+        return make_response(jsonify({"message": "User account is already verified."})), 200
+
+    if user:  
+        user.verified = True
+        db.session.commit()
+        app.logger.info('Email verified successfully')
+        return make_response(jsonify({"message": "Email verified successfully!"})), 200
+    else:
+        app.logger.warning('Invalid verification link.')
+        return make_response(jsonify({"error": "Invalid verification link."})), 400
+
+
+
+def protected_endpoint():
+    username = auth.current_user()
+    user = User.query.filter_by(username=username).first()
+    if not user.verified:
+        return jsonify({"error": "User account not verified."}), 403  # HTTP 403 Forbidden
+    # Proceed with endpoint logic
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port= 8080, debug=True)
