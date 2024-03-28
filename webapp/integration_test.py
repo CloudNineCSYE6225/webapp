@@ -37,7 +37,7 @@ def test_create_user(client_and_user):
 
 """
 def test_get_user(client_and_user):
-    """Test retrieving an existing user using Basic Auth."""
+    Test retrieving an existing user using Basic Auth.
     client = client_and_user['client']
     unique_username = client_and_user['username']
     encoded_credentials = encode_credentials(unique_username, 'TestPass123')
@@ -49,7 +49,7 @@ def test_get_user(client_and_user):
 
 
 def test_update_user(client_and_user):
-    """Test updating an existing user and verifying the update."""
+    Test updating an existing user and verifying the update.
     # Encode the original credentials for the update operation
     client = client_and_user['client']
     unique_username = client_and_user['username']
