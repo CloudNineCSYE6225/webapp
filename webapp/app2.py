@@ -60,8 +60,8 @@ def publish_verification_request(user_email):
     message_bytes = message_json.encode('utf-8')
     
     # Publish the message
-    future = publisher.publish(topic_name, data=message_bytes)
     try:
+        future = publisher.publish(topic_name, data=message_bytes)
         # Wait for the publish call to return and get the message ID
         message_id = future.result()
         print(f"Message published with ID: {message_id}")
