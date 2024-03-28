@@ -32,7 +32,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r webapp/requirements.txt
-          pip install pytest flask-testing python-dotenv cryptography python-json-logger
+          pip install pytest flask-testing python-dotenv cryptography python-json-logger pymysql google-cloud-pubsub requests
 
       - name: Configure Application
         run: |
