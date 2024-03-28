@@ -16,9 +16,9 @@ from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from google.cloud import pubsub_v1
 import json
+from google.auth.exceptions import DefaultCredentialsError
 
-publisher = pubsub_v1.PublisherClient()
-topic_name = 'projects/dev6225webapp/topics/verify_email_id'
+
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
@@ -52,14 +52,30 @@ try:
 except Exception as e:
     print(f"Failed to configure logging: {e}")
 
+try:
+    publisher = pubsub_v1.PublisherClient()
+    topic_name = 'projects/dev6225webapp/subscriptions/verify-email-subscription'
+except DefaultCredentialsError as e:
+    # Handle the situation where credentials are not found
+    app.logger.error("Google Cloud credentials not found. Ensure the GOOGLE_APPLICATION_CREDENTIALS environment variable is set correctly.")
+
+    # Initialize publisher to None or a mock object if you want to allow the application to run without publishing.
+    publisher = None
+    topic_name = None
 
 def publish_verification_request(user_email):
+
+    if publisher is None:
+        app.logger.warning("Publisher client is not initialized. Skipping message publish.")
+        return
+
     message_json = json.dumps({
         'email': user_email,
     })
     message_bytes = message_json.encode('utf-8')
     
     # Publish the message
+    
     try:
         future = publisher.publish(topic_name, data=message_bytes)
         # Wait for the publish call to return and get the message ID
