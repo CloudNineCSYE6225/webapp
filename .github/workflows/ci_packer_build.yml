@@ -1,7 +1,7 @@
 name: Packer Build on Merge
  
 on:
-  pull_request:
+  push:
     branches:
       - main 
  
@@ -29,7 +29,13 @@ jobs:
       id: packer_build
       run: |
         packer build -var 'credentials_file=serviceaccount.json' newtemplate.pkr.hcl
-        echo "PACKER_OUTPUT=$(cat manifest.json)" >> $GITHUB_ENV
+        echo "PACKER_OUTPUT=$(cat manifest.json)"
+
+    - name: Extract and Set Environment Variables
+      run: |
+        ARTIFACT_ID=$(jq -r '.builds[0].artifact_id' manifest.json)
+        echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_ENV
+      
 
     # NEW: Set up Google Cloud SDK
     - name: Setup GCP Cloud SDK
@@ -45,7 +51,7 @@ jobs:
         IMAGE_ID=$(echo $PACKER_OUTPUT | jq -r '.builds[-1].artifact_id')
         gcloud compute instance-templates create new-template-${{ github.run_number }} \
           --image=$IMAGE_ID \
-          --machine-type=n1-standard-1 \
+          --machine-type=e2-medium \
           --subnet=default \
           --region=us-west1 \
           --tags=http-server,https-server
@@ -77,3 +83,5 @@ jobs:
           sleep 30
         done
 
+
+      
