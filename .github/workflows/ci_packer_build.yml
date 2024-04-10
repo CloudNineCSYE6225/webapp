@@ -1,7 +1,7 @@
 name: Packer Build on Merge
  
 on:
-  push:
+  pull_request:
     branches:
       - main 
  
@@ -26,6 +26,54 @@ jobs:
       env:
         GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}  
     - name: Build with Packer
-      run: packer build -var 'credentials_file=serviceaccount.json' newtemplate.pkr.hcl
-      env:
-        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+      id: packer_build
+      run: |
+        packer build -var 'credentials_file=serviceaccount.json' newtemplate.pkr.hcl
+        echo "PACKER_OUTPUT=$(cat manifest.json)" >> $GITHUB_ENV
+
+    # NEW: Set up Google Cloud SDK
+    - name: Setup GCP Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+        export_default_credentials: true
+
+    # NEW: Create a new Instance Template version with the latest Packer image
+    - name: Create New Instance Template
+      run: |
+        IMAGE_ID=$(echo $PACKER_OUTPUT | jq -r '.builds[-1].artifact_id')
+        gcloud compute instance-templates create new-template-${{ github.run_number }} \
+          --image=$IMAGE_ID \
+          --machine-type=n1-standard-1 \
+          --subnet=default \
+          --region=us-west1 \
+          --tags=http-server,https-server
+
+    # NEW: Configure the managed instance group to use this new template
+    - name: Update Instance Group Template
+      run: |
+        gcloud compute instance-groups managed set-instance-template webapp-instance-group \
+          --template=new-template-${{ github.run_number }} \
+          --region=us-west1
+
+    # NEW: Start a Rolling Update
+    - name: Start Rolling Update
+      run: |
+        OPERATION=$(gcloud compute instance-groups managed rolling-action start-update webapp-instance-group \
+          --version template=new-template-${{ github.run_number }} \
+          --zone=us-west1-b \
+          --type=proactive \
+          --max-surge=1 \
+          --max-unavailable=0 --format="value(operation.name)")
+        echo "OPERATION_NAME=$OPERATION" >> $GITHUB_ENV
+  
+
+    # NEW: Monitor Rolling Update
+    - name: Monitor Rolling Update
+      run: |
+        while [[ $(gcloud compute operations describe ${{ env.OPERATION_NAME }} --zone=us-west1-b --format="get(status)") != "DONE" ]]; do
+          echo "Waiting for rolling update to complete..."
+          sleep 30
+        done
+
