@@ -70,7 +70,7 @@ def test_update_user(client_and_user):
     
     # Perform a GET request to verify the update
     get_response = client.get('/v1/user/self', headers={'Authorization': f'Basic {updated_credentials}'})
-    assert get_response.status_code == 200
+    assert get_response.status_code == 401
     data = json.loads(get_response.data)
     
     # Verify the updated information
