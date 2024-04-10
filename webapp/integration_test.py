@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 json_data = {
     "username": "abc",
-    "firstname": "Test Updated",
-    "lastname": "User Updated"
+    "first_name": "Test Updated",
+    "last_name": "User Updated"
 }
 @pytest.fixture
 def client_and_user():
