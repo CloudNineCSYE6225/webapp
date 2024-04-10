@@ -96,8 +96,8 @@ jobs:
           --version template=new-template-${{ github.run_number }} \
           --region=us-west1 \
           --type=proactive \
-          --max-surge=0 \
-          --max-unavailable=0 --format="value(operation.name)")
+          --max-surge=1 \
+          --max-unavailable=1 --format="value(operation.name)")
         echo "OPERATION_NAME=$OPERATION" >> $GITHUB_ENV
   
 
