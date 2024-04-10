@@ -49,7 +49,6 @@ def test_get_user(client_and_user):
     
     response = client.get('/v1/user/self', headers={'Authorization': f'Basic {encoded_credentials}'})
     assert response.status_code == 403
-    data = json.loads(response.data)
     assert json_data['username'] == "abc"
 
 
@@ -76,7 +75,6 @@ def test_update_user(client_and_user):
     # Perform a GET request to verify the update
     get_response = client.get('/v1/user/self', headers={'Authorization': f'Basic {updated_credentials}'})
     assert get_response.status_code == 401
-    data = json.loads(get_response.data)
     
     # Verify the updated information
     assert json_data['first_name'] == 'Test Updated'
