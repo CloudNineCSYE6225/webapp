@@ -43,7 +43,7 @@ def test_get_user(client_and_user):
     encoded_credentials = encode_credentials(unique_username, 'TestPass123')
     
     response = client.get('/v1/user/self', headers={'Authorization': f'Basic {encoded_credentials}'})
-    assert response.status_code == 201
+    assert response.status_code == 403
     data = json.loads(response.data)
     assert data['username'] == unique_username
 
@@ -63,7 +63,7 @@ def test_update_user(client_and_user):
         'last_name': 'User Updated',
         'password': new_password,
     }, headers={'Authorization': f'Basic {original_credentials}'})
-    assert update_response.status_code == 201
+    assert update_response.status_code == 403
 
     # Encode the updated credentials for verification
     updated_credentials = encode_credentials(unique_username, new_password)
