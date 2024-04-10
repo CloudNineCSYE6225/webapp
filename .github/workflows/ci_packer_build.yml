@@ -45,16 +45,42 @@ jobs:
         service_account_key: ${{ secrets.GCP_CREDENTIALS }}
         export_default_credentials: true
 
-    # NEW: Create a new Instance Template version with the latest Packer image
+
+
+    - name: Create Initial Instance Template
+      run: |
+        gcloud compute instance-templates create initial-template \
+          --machine-type=e2-medium \
+          --image-family=debian-10 \
+          --image-project=debian-cloud \
+          --tags=http-server,https-server \
+          --region=us-west1 \
+          --subnet=default
+
+    - name: Create Managed Instance Group if it does not exist
+      run: |
+        if ! gcloud compute instance-groups managed describe webapp-instance-group --region=us-west1; then
+          echo "Creating a new managed instance group..."
+          gcloud compute instance-groups managed create webapp-instance-group \
+            --base-instance-name=webapp-instance \
+            --size=1 \
+            --template=initial-template \
+            --region=us-west1
+        else
+          echo "Instance group already exists."
+        fi
+
     - name: Create New Instance Template
       run: |
-        IMAGE_ID=$(echo $PACKER_OUTPUT | jq -r '.builds[-1].artifact_id')
+        IMAGE_ID=$(jq -r '.builds[-1].artifact_id' manifest.json)
+        echo "Creating a new instance template with IMAGE_ID: $IMAGE_ID"
         gcloud compute instance-templates create new-template-${{ github.run_number }} \
           --image=$IMAGE_ID \
           --machine-type=e2-medium \
           --subnet=default \
           --region=us-west1 \
           --tags=http-server,https-server
+    
 
     # NEW: Configure the managed instance group to use this new template
     - name: Update Instance Group Template
