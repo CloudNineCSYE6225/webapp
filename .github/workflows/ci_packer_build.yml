@@ -94,7 +94,7 @@ jobs:
       run: |
         OPERATION=$(gcloud compute instance-groups managed rolling-action start-update webapp-instance-group \
           --version template=new-template-${{ github.run_number }} \
-          --zone=us-west1 \
+          --region=us-west1 \
           --type=proactive \
           --max-surge=1 \
           --max-unavailable=0 --format="value(operation.name)")
