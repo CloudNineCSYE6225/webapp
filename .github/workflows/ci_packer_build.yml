@@ -1,7 +1,7 @@
 name: Packer Build on Merge
  
 on:
-  push:
+  pull_request:
     branches:
       - main 
  
@@ -26,6 +26,91 @@ jobs:
       env:
         GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}  
     - name: Build with Packer
-      run: packer build -var 'credentials_file=serviceaccount.json' newtemplate.pkr.hcl
-      env:
-        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+      id: packer_build
+      run: |
+        packer build -var 'credentials_file=serviceaccount.json' newtemplate.pkr.hcl
+        echo "PACKER_OUTPUT=$(cat manifest.json)"
+
+    - name: Extract and Set Environment Variables
+      run: |
+        ARTIFACT_ID=$(jq -r '.builds[0].artifact_id' manifest.json)
+        echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_ENV
+      
+
+    # NEW: Set up Google Cloud SDK
+    - name: Setup GCP Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+        export_default_credentials: true
+
+
+
+    - name: Create Initial Instance Template
+      run: |
+        gcloud compute instance-templates create initial-template-${{ github.run_number }} \
+          --machine-type=e2-medium \
+          --image-family=debian-10 \
+          --image-project=debian-cloud \
+          --tags=http-server,https-server \
+          --region=us-west1 \
+          --subnet=default
+
+    - name: Create Managed Instance Group if it does not exist
+      run: |
+        if ! gcloud compute instance-groups managed describe webapp-instance-group --region=us-west1; then
+          echo "Creating a new managed instance group..."
+          gcloud compute instance-groups managed create webapp-instance-group \
+            --base-instance-name=webapp-instance \
+            --size=1 \
+            --template=initial-template-${{ github.run_number }} \
+            --region=us-west1
+        else
+          echo "Instance group already exists."
+        fi
+
+    - name: Create New Instance Template
+      run: |
+        IMAGE_ID=$(jq -r '.builds[-1].artifact_id' manifest.json)
+        echo "Creating a new instance template with IMAGE_ID: $IMAGE_ID"
+        gcloud compute instance-templates create new-template-${{ github.run_number }} \
+          --image=$IMAGE_ID \
+          --machine-type=e2-medium \
+          --subnet=default \
+          --region=us-west1 \
+          --tags=http-server,https-server
+    
+
+    # NEW: Configure the managed instance group to use this new template
+    - name: Update Instance Group Template
+      run: |
+        gcloud compute instance-groups managed set-instance-template webapp-instance-group \
+          --template=new-template-${{ github.run_number }} \
+          --region=us-west1
+
+    # NEW: Start a Rolling Update
+    - name: Start Rolling Update
+      run: |
+        OPERATION=$(gcloud compute instance-groups managed rolling-action start-update webapp-instance-group \
+          --version template=new-template-${{ github.run_number }} \
+          --region=us-west1 \
+          --type=proactive \
+          --max-surge=3 \
+          --max-unavailable=0 --format="value(operation.name)")
+        echo "OPERATION_NAME=$OPERATION" >> $GITHUB_ENV
+
+  
+
+    # Monitor Rolling Update
+    - name: Monitor Rolling Update
+      run: |
+        if [[ -z "${{ env.OPERATION_NAME }}" ]]; then
+          echo "OPERATION_NAME is not set. Exiting."
+          exit 0
+        fi
+
+        while [[ $(gcloud compute operations describe ${{ env.OPERATION_NAME }} --region=us-west1 --format="get(status)") != "DONE" ]]; do
+          echo "Waiting for rolling update to complete..."
+          sleep 30
+        done

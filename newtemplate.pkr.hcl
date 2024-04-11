@@ -9,7 +9,7 @@ packer {
 
 variable "machine_type" {
   type    = string
-  default = "n1-standard-4"
+  default = "e2-medium"
 }
 
 variable "project_id" {
@@ -72,6 +72,13 @@ build {
 
   provisioner "shell" {
     script = "setup.sh"
+  }
+
+  post-processors {
+    post-processor "manifest" {
+      output     = "manifest.json"
+      strip_path = true
+    }
   }
 
 }
