@@ -102,13 +102,15 @@ jobs:
 
   
 
-    # NEW: Monitor Rolling Update
+    # Monitor Rolling Update
     - name: Monitor Rolling Update
       run: |
-        while [[ $(gcloud compute operations describe ${{ env.OPERATION_NAME }} --region=us-west1-b --format="get(status)") != "DONE" ]]; do
+        if [[ -z "${{ env.OPERATION_NAME }}" ]]; then
+          echo "OPERATION_NAME is not set. Exiting."
+          exit 0
+        fi
+
+        while [[ $(gcloud compute operations describe ${{ env.OPERATION_NAME }} --region=us-west1 --format="get(status)") != "DONE" ]]; do
           echo "Waiting for rolling update to complete..."
           sleep 30
         done
-
-
-      
