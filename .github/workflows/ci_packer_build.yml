@@ -49,7 +49,7 @@ jobs:
 
     - name: Create Initial Instance Template
       run: |
-        gcloud compute instance-templates create initial-template \
+        gcloud compute instance-templates create initial-template-${{ github.run_number }} \
           --machine-type=e2-medium \
           --image-family=debian-10 \
           --image-project=debian-cloud \
@@ -64,7 +64,7 @@ jobs:
           gcloud compute instance-groups managed create webapp-instance-group \
             --base-instance-name=webapp-instance \
             --size=1 \
-            --template=initial-template \
+            --template=initial-template-${{ github.run_number }} \
             --region=us-west1
         else
           echo "Instance group already exists."
@@ -96,15 +96,16 @@ jobs:
           --version template=new-template-${{ github.run_number }} \
           --region=us-west1 \
           --type=proactive \
-          --max-surge=1 \
-          --max-unavailable=1 --format="value(operation.name)")
+          --max-surge=3
+          --max-unavailable=0 --format="value(operation.name)")
         echo "OPERATION_NAME=$OPERATION" >> $GITHUB_ENV
+
   
 
     # NEW: Monitor Rolling Update
     - name: Monitor Rolling Update
       run: |
-        while [[ $(gcloud compute operations describe ${{ env.OPERATION_NAME }} --zone=us-west1-b --format="get(status)") != "DONE" ]]; do
+        while [[ $(gcloud compute operations describe ${{ env.OPERATION_NAME }} --region=us-west1-b --format="get(status)") != "DONE" ]]; do
           echo "Waiting for rolling update to complete..."
           sleep 30
         done
