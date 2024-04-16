@@ -19,7 +19,7 @@ def client_and_user():
     unique_username = f"testuser_{uuid.uuid4()}"  
     app.config['TESTING'] = True
     with app.test_client() as client:
-        response = client.post('/v1/user', json={
+        response = client.post('/v2/user', json={
             'username': unique_username,
             'password': 'TestPass123',
             'first_name': 'Test',
@@ -47,7 +47,7 @@ def test_get_user(client_and_user):
     unique_username = client_and_user['username']
     encoded_credentials = encode_credentials(unique_username, 'TestPass123')
     
-    response = client.get('/v1/user/self', headers={'Authorization': f'Basic {encoded_credentials}'})
+    response = client.get('/v2/user/self', headers={'Authorization': f'Basic {encoded_credentials}'})
     assert response.status_code == 403
     assert json_data['username'] == "abc"
 
@@ -62,7 +62,7 @@ def test_update_user(client_and_user):
     new_password = 'NewTestPass123'
     
     # Perform the update operation
-    update_response = client.put('/v1/user/self', json={
+    update_response = client.put('/v2/user/self', json={
         'first_name': 'Test Updated',
         'last_name': 'User Updated',
         'password': new_password,
@@ -73,7 +73,7 @@ def test_update_user(client_and_user):
     updated_credentials = encode_credentials(unique_username, new_password)
     
     # Perform a GET request to verify the update
-    get_response = client.get('/v1/user/self', headers={'Authorization': f'Basic {updated_credentials}'})
+    get_response = client.get('/v2/user/self', headers={'Authorization': f'Basic {updated_credentials}'})
     assert get_response.status_code == 401
     
     # Verify the updated information

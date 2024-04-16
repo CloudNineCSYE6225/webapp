@@ -134,7 +134,7 @@ def verify_password(username, password):
     if user and bcrypt.check_password_hash(user.password, password):
         return username
 
-@app.route('/v1/user', methods=['POST'])
+@app.route('/v2/user', methods=['POST'])
 def create_user():
     data = request.json
     app.logger.info('Received request for user creation', extra={'request_data': data})
@@ -170,7 +170,7 @@ def create_user():
     }), 201
 
 
-@app.route('/v1/user/self', methods=['PUT'])
+@app.route('/v2/user/self', methods=['PUT'])
 @auth.login_required
 def update_user():
     data = request.json
@@ -206,7 +206,7 @@ def update_user():
 
 
 
-@app.route('/v1/user/self', methods=['GET'])
+@app.route('/v2/user/self', methods=['GET'])
 @auth.login_required
 def get_user():
     username = auth.current_user()
